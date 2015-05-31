@@ -200,7 +200,21 @@ def get_artist_radio(artist_ids):
     else:
         return similar_artists
 
+def get_url_contents_range(url_list, store):
+    for url in url_list:
+        if url in store:
+            return
+        else:
+            try:
+                get_url = urllib2.urlopen(url);
+                clean_page = get_url.read();
+                output =  json.loads(clean_page)
+                store[url] = output
+            except:
+                pass
+
 def playlist_rec_for_artist_params(similar_artist_list, params, param_range):
+    a = time.time()
     playlist = []
     acoustic = params.get('acousticness', None)
     dance = params.get('danceability', None)
@@ -213,16 +227,18 @@ def playlist_rec_for_artist_params(similar_artist_list, params, param_range):
     energy_min = energy - param_range if energy else 0
     url_base = 'http://developer.echonest.com/api/v4/song/search?api_key=YZZS9XI0IMOLQRKQ6&artist_id='
 
-    for artist in similar_artist_list:
-        try:
-            url = url_base + artist + '&bucket=id:spotify-WW&bucket=tracks&sort=song_hotttnesss-desc' + \
+    url_list = [url_base + artist + '&bucket=id:spotify-WW&bucket=tracks&sort=song_hotttnesss-desc' + \
             '&min_danceability=' + str(dance_min) + "&max_danceability=" + str(dance_max) + \
             '&min_acousticness=' + str(acoustic_min) + "&max_acousticness=" + str(acoustic_max) + \
-            '&min_energy=' + str(energy_min) + "&max_energy=" + str(energy_max) + "&results=5"
-            get_url = urllib2.urlopen(url);
-            clean_page = get_url.read();
-            output =  json.loads(clean_page)
-            songs_dict = output['response']['songs'][0]
+            '&min_energy=' + str(energy_min) + "&max_energy=" + str(energy_max) + "&results=5" \
+                for artist in similar_artist_list]
+    b = time.time()
+    track_from_url = threaded_process(N_THREADS, get_url_contents_range, url_list)
+    c = time.time()
+    print 'thread time: ' +str(c-b)
+    for output in track_from_url:
+        try:
+            songs_dict = track_from_url[output]['response']['songs'][0]
             for i, song in enumerate(songs_dict['tracks']):
                 if i > 4:
                     break
@@ -230,6 +246,8 @@ def playlist_rec_for_artist_params(similar_artist_list, params, param_range):
                     playlist.append(song['foreign_id'])
         except:
             pass
+    j = time.time()
+    print 'overall time: ' + str(j-a)
     return sample(playlist, len(playlist))
 
 @app.route('/', methods = ['POST'])
