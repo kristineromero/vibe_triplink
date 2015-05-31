@@ -171,7 +171,8 @@ def get_common_tracks():
     top_qualifiers = get_top_qualifiers(artist_qualifiers)
     artists_use = get_artist_with_qualifiers(artist_qualifiers, top_qualifiers)
     common_tracks, artist_frequency = get_tracks(song_list_info, artists_use, params, PARAMS_RANGE)
-    return common_tracks
+    playlist = jsonify( { 'playlist': common_tracks} )
+    return playlist
 
 if __name__ == '__main__':
     app.run(debug = True)
