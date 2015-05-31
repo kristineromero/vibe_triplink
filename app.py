@@ -1,8 +1,9 @@
-import urllib
+import urllib2
 import pyen
 from threading import Thread
 import json
 from flask import Flask, jsonify, request
+from random import sample
 
 app = Flask(__name__)
 
@@ -159,20 +160,101 @@ def get_tracks(song_list_info, artists_use, params, param_range):
 
     return spotify_track_ids, artist_frequency
 
+def find_similar_artists(artist_id):
+    try:
+        response = en.get('artist/similar', id = artist_id)
+        similar_artists = [artist['id'] for artist in response['artists']]
+        if len(similar_artists) > 3:
+            return sample(similar_artists,3)
+        else:
+            return similar_artists
+    except:
+        pass
+
+def find_similar_artists_range(artist_frequency, store):
+    ranked_artist = list(reversed(sorted(artist_frequency, key=artist_frequency.get)))
+    if len(ranked_artist) > 3:
+        ranked_artist = ranked_artist[:3]
+
+    for artist in ranked_artist:
+        if artist in store:
+            return
+        else:
+            store[artist] = find_similar_artists(artist)
+    return reduce(lambda x,y: x+y, store.values())
 @app.route('/', methods = ['POST'])
 
-def get_common_tracks():
-    songs =  request.json['songs']
-    params = request.json['params']
-    song_list_info = threaded_process(N_THREADS, get_song_info_range, songs)
-    song_list_info = add_song_frequency(song_list_info, songs)
-    artist_list = get_artist_list(song_list_info)
-    artist_qualifiers = threaded_process(N_THREADS, get_artist_qualifiers_range, artist_list)
-    top_qualifiers = get_top_qualifiers(artist_qualifiers)
-    artists_use = get_artist_with_qualifiers(artist_qualifiers, top_qualifiers)
-    common_tracks, artist_frequency = get_tracks(song_list_info, artists_use, params, PARAMS_RANGE)
-    playlist = jsonify( { 'playlist': common_tracks} )
-    return playlist
+def get_artist_radio(artist_ids):
+    artist_ids = list(artist_ids)
+    similar_artists = []
+    if len(artist_ids) == 1:
+        response = en.get('artist/similar', id = artist_ids[0])
+        similar_artists = [artist['id'] for artist in response['artists']]
+    else:
+        for artist in artist_ids:
+            response = en.get('artist/similar', id = artist_ids)
+            add_artists = [artist['id'] for artist in response['artists']]
+            similar_artists.extend(add_artists)
+    if len(similar_artists) > 5:
+        return sample(similar_artists,5)
+    else:
+        return similar_artists
+
+def playlist_rec_for_artist_params(similar_artist_list, params, param_range):
+    playlist = []
+    acoustic = params.get('acousticness', None)
+    dance = params.get('danceability', None)
+    energy = params.get('energy', None)
+    acoustic_max = acoustic + param_range if acoustic else 1
+    acoustic_min = acoustic - param_range if acoustic else 0
+    dance_max = dance + param_range if dance else 1
+    dance_min = dance - param_range if dance else 0
+    energy_max = energy + param_range if energy else 1
+    energy_min = energy - param_range if energy else 0
+    url_base = 'http://developer.echonest.com/api/v4/song/search?api_key=YZZS9XI0IMOLQRKQ6&artist_id='
+
+    for artist in similar_artist_list:
+        try:
+            url = url_base + artist + '&bucket=id:spotify-WW&bucket=tracks&sort=song_hotttnesss-desc' + \
+            '&min_danceability=' + str(dance_min) + "&max_danceability=" + str(dance_max) + \
+            '&min_acousticness=' + str(acoustic_min) + "&max_acousticness=" + str(acoustic_max) + \
+            '&min_energy=' + str(energy_min) + "&max_energy=" + str(energy_max) + "&results=5"
+            get_url = urllib2.urlopen(url);
+            clean_page = get_url.read();
+            output =  json.loads(clean_page)
+            songs_dict = output['response']['songs'][0]
+            for i, song in enumerate(songs_dict['tracks']):
+                if i > 4:
+                    break
+                else:
+                    playlist.append(song['foreign_id'])
+        except:
+            pass
+    return sample(playlist, len(playlist))
+
+def get_common_tracks(input_list):
+    PARAMS = request.json['params']
+    ARTIST_RADIO =  request.json['artist_radio']
+    if not ARTIST_RADIO:
+        SONGS =  request.json['input_list']
+        song_list_info = threaded_process(N_THREADS, get_song_info_range, SONGS)
+        song_list_info = add_song_frequency(song_list_info, SONGS)
+        artist_list = get_artist_list(song_list_info)
+        artist_qualifiers = threaded_process(N_THREADS, get_artist_qualifiers_range, artist_list)
+        top_qualifiers = get_top_qualifiers(artist_qualifiers)
+        artists_use = get_artist_with_qualifiers(artist_qualifiers, top_qualifiers)
+        common_tracks, artist_frequency = get_tracks(song_list_info, artists_use, PARAMS, PARAMS_RANGE)
+        similar_artist_list = find_similar_artists_range(artist_frequency, {})
+        playlist = playlist_rec_for_artist_params(similar_artist_list, PARAMS, PARAMS_RANGE)
+        playlist = common_tracks + playlist
+    elif ARTIST_RADIO:
+        ARTISTS = request.json['input_list']
+        similar_artist_list = get_artist_radio(ARTISTS)
+        playlist = playlist_rec_for_artist_params(similar_artist_list, PARAMS, PARAMS_RANGE)
+    playlist_output = jsonify( { 'playlist': playlist} )
+    return playlist_output
+
+
 
 if __name__ == '__main__':
     app.run(debug = True)
