@@ -4,6 +4,7 @@ from threading import Thread
 import json
 from flask import Flask, jsonify, request
 from random import sample
+import time
 
 app = Flask(__name__)
 
@@ -238,16 +239,40 @@ def get_common_tracks():
     ARTIST_RADIO =  request.json['artist_radio']
     if not ARTIST_RADIO:
         print 'songs'
+        tic = time.time()
         SONGS =  request.json['input_list']
         song_list_info = threaded_process(N_THREADS, get_song_info_range, SONGS)
+        toc = time.time()
+        print 'song_list_info:', str(tic-toc)
+        tic = time.time()
         song_list_info = add_song_frequency(song_list_info, SONGS)
         artist_list = get_artist_list(song_list_info)
+        toc = time.time()
+        print 'artist_list:', str(tic-toc)
+        tic = time.time()
         artist_qualifiers = threaded_process(N_THREADS, get_artist_qualifiers_range, artist_list)
+        toc = time.time()
+        print 'artist_qualifiers:', str(tic-toc)
+        tic = time.time()
         top_qualifiers = get_top_qualifiers(artist_qualifiers)
+        toc = time.time()
+        print 'top_qualifiers:', str(tic-toc)
+        tic = time.time()
         artists_use = get_artist_with_qualifiers(artist_qualifiers, top_qualifiers)
+        toc = time.time()
+        print 'artists_use:', str(tic-toc)
+        tic = time.time()
         common_tracks, artist_frequency = get_tracks(song_list_info, artists_use, PARAMS, PARAMS_RANGE)
+        toc = time.time()
+        print 'common_tracks:', str(tic-toc)
+        tic = time.time()
         similar_artist_list = find_similar_artists_range(artist_frequency, {})
+        toc = time.time()
+        print 'similar_artist_list:', str(tic-toc)
+        tic = time.time()
         playlist = playlist_rec_for_artist_params(similar_artist_list, PARAMS, PARAMS_RANGE)
+        toc = time.time()
+        print 'playlist', str(tic-toc)
         playlist = common_tracks + playlist
     elif ARTIST_RADIO:
         ARTISTS = request.json['input_list']
