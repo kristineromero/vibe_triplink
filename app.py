@@ -182,7 +182,6 @@ def find_similar_artists_range(artist_frequency, store):
         else:
             store[artist] = find_similar_artists(artist)
     return reduce(lambda x,y: x+y, store.values())
-@app.route('/', methods = ['POST'])
 
 def get_artist_radio(artist_ids):
     artist_ids = list(artist_ids)
@@ -232,10 +231,13 @@ def playlist_rec_for_artist_params(similar_artist_list, params, param_range):
             pass
     return sample(playlist, len(playlist))
 
-def get_common_tracks(input_list):
+@app.route('/', methods = ['POST'])
+
+def get_common_tracks():
     PARAMS = request.json['params']
     ARTIST_RADIO =  request.json['artist_radio']
     if not ARTIST_RADIO:
+        print 'songs'
         SONGS =  request.json['input_list']
         song_list_info = threaded_process(N_THREADS, get_song_info_range, SONGS)
         song_list_info = add_song_frequency(song_list_info, SONGS)
