@@ -16,6 +16,10 @@ QUALIFIERS_MAX = 3
 PARAMS_RANGE = 0.2
 N_THREADS = 4
 
+"""
+    Author: Kristine Romero
+"""
+
 def get_song_frequency(song_list):
     song_frequency = {}
     for song in song_list:
