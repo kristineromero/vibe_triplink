@@ -14,7 +14,8 @@ ARTIST_QUALIFIER = 'terms' # genres
 N_QUALIFIERS = 5
 QUALIFIERS_MAX = 3
 PARAMS_RANGE = 0.2
-N_THREADS = 4
+N_THREADS = 32
+ARTIST_SAMPLE_SIZE = 15
 
 """
     Author: Kristine Romero
@@ -199,8 +200,8 @@ def get_artist_radio(artist_ids):
             response = en.get('artist/similar', id = artist_ids)
             add_artists = [artist['id'] for artist in response['artists']]
             similar_artists.extend(add_artists)
-    if len(similar_artists) > 5:
-        return sample(similar_artists,5)
+    if len(similar_artists) > ARTIST_SAMPLE_SIZE:
+        return sample(similar_artists, ARTIST_SAMPLE_SIZE)
     else:
         return similar_artists
 
@@ -217,9 +218,20 @@ def get_url_contents_range(url_list, store):
             except:
                 pass
 
+def song_debug(song_list):
+    song_list_meta = {}
+    for i, song in enumerate(song_list):
+        try:
+            response = en.get('song/profile',track_id=song, bucket=['audio_summary'])
+            song_list_meta[(response['songs'][0]['artist_name'] + ' - '+ response['songs'][0]['title'])] = song
+        except:
+            continue
+    return song_list_meta
+
 def playlist_rec_for_artist_params(similar_artist_list, params, param_range):
     a = time.time()
     playlist = []
+    output_dict = {}
     acoustic = params.get('acousticness', None)
     dance = params.get('danceability', None)
     energy = params.get('energy', None)
@@ -240,16 +252,18 @@ def playlist_rec_for_artist_params(similar_artist_list, params, param_range):
     track_from_url = threaded_process(N_THREADS, get_url_contents_range, url_list)
     c = time.time()
     print 'thread time: ' +str(c-b)
-    for output in track_from_url:
-        try:
-            songs_dict = track_from_url[output]['response']['songs'][0]
-            for i, song in enumerate(songs_dict['tracks']):
-                if i > 4:
-                    break
-                else:
-                    playlist.append(song['foreign_id'])
-        except:
-            pass
+
+    # Extract unique songs from the top songs of the artist list
+    keys = track_from_url.keys()
+    for key in keys:
+        for i, song in enumerate(track_from_url[key]['response']['songs']):
+            if i >= 2:
+                pass
+            else:
+                if song.get('tracks', None):
+                    output_dict[song['title'] + '-' + song['artist_name']] = [track['foreign_id'] for track in song['tracks']][0]
+    playlist = output_dict.values()
+
     j = time.time()
     print 'overall time: ' + str(j-a)
     return sample(playlist, len(playlist))
