@@ -267,6 +267,9 @@ def playlist_rec_for_artist_params(similar_artist_list, params, param_range):
 
     j = time.time()
     print 'overall time: ' + str(j-a)
+    print 'number of similar artists: ' + str(len(similar_artist_list))
+    print 'songs in playlist: ' + str(len(playlist))
+    print 'returned artists: ' + str(len(keys))
     return sample(playlist, len(playlist))
 
 @app.route('/', methods = ['POST'])
