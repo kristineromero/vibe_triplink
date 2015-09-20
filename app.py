@@ -16,6 +16,7 @@ QUALIFIERS_MAX = 3
 PARAMS_RANGE = 0.2
 N_THREADS = 32
 ARTIST_SAMPLE_SIZE = 15
+SIMILAR_ARTIST_RETURN = 7
 
 """
     Author: Kristine Romero
@@ -179,8 +180,8 @@ def find_similar_artists(artist_id):
 
 def find_similar_artists_range(artist_frequency, store):
     ranked_artist = list(reversed(sorted(artist_frequency, key=artist_frequency.get)))
-    if len(ranked_artist) > 3:
-        ranked_artist = ranked_artist[:3]
+    if len(ranked_artist) > SIMILAR_ARTIST_RETURN:
+        ranked_artist = ranked_artist[:SIMILAR_ARTIST_RETURN]
 
     for artist in ranked_artist:
         if artist in store:
@@ -246,7 +247,7 @@ def playlist_rec_for_artist_params(similar_artist_list, params, param_range):
     url_list = [url_base + artist + '&bucket=id:spotify-WW&bucket=tracks&sort=song_hotttnesss-desc' + \
             '&min_danceability=' + str(dance_min) + "&max_danceability=" + str(dance_max) + \
             '&min_acousticness=' + str(acoustic_min) + "&max_acousticness=" + str(acoustic_max) + \
-            '&min_energy=' + str(energy_min) + "&max_energy=" + str(energy_max) + "&results=15" \
+            '&min_energy=' + str(energy_min) + "&max_energy=" + str(energy_max) + "&results=5" \
                 for artist in similar_artist_list]
     b = time.time()
     track_from_url = threaded_process(N_THREADS, get_url_contents_range, url_list)
