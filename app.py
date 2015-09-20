@@ -273,6 +273,7 @@ def playlist_rec_for_artist_params(similar_artist_list, params, param_range):
 def get_common_tracks():
     PARAMS = request.json['params']
     ARTIST_RADIO =  request.json['artist_radio']
+    COMMON_TRACKS = request.json['common_tracks']
     if not ARTIST_RADIO:
         print 'songs'
         tic = time.time()
@@ -309,7 +310,8 @@ def get_common_tracks():
         playlist = playlist_rec_for_artist_params(similar_artist_list, PARAMS, PARAMS_RANGE)
         toc = time.time()
         print 'playlist', str(tic-toc)
-        playlist = common_tracks + playlist
+        if COMMON_TRACKS:
+            playlist = common_tracks + playlist
     elif ARTIST_RADIO:
         ARTISTS = request.json['input_list']
         similar_artist_list = get_artist_radio(ARTISTS)
