@@ -236,12 +236,12 @@ def playlist_rec_for_artist_params(similar_artist_list, params, param_range):
     acoustic = params.get('acousticness', None)
     dance = params.get('danceability', None)
     energy = params.get('energy', None)
-    acoustic_max = acoustic + param_range if acoustic else 1
-    acoustic_min = acoustic - param_range if acoustic else 0
-    dance_max = dance + param_range if dance else 1
-    dance_min = dance - param_range if dance else 0
-    energy_max = energy + param_range if energy else 1
-    energy_min = energy - param_range if energy else 0
+    acoustic_max = acoustic + param_range if acoustic and acoustic + param_range < 1 else 1
+    acoustic_min = acoustic - param_range if acoustic and acoustic - param_range > 0 else 0
+    dance_max = dance + param_range if dance and dance + param_range < 1 else 1
+    dance_min = dance - param_range if dance  and dance -  param_range >0 else 0
+    energy_max = energy + param_range if energy and energy + param_range < 1 else 1
+    energy_min = energy - param_range if energy and energy - param_range > 0 else 0
     url_base = 'http://developer.echonest.com/api/v4/song/search?api_key=YZZS9XI0IMOLQRKQ6&artist_id='
 
     url_list = [url_base + artist + '&bucket=id:spotify-WW&bucket=tracks&sort=song_hotttnesss-desc' + \
